@@ -1,5 +1,13 @@
 const mysql = require('mysql2/promise');
 
+// Debugging output to check if environment variables are being picked up correctly
+console.log("DB Config:", {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD ? "[HIDDEN]" : "NOT SET",
+  database: process.env.DB_NAME
+});
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "sql5.freesqldatabase.com",
   user: process.env.DB_USER || "sql5774886",
