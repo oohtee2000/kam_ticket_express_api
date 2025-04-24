@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "sql5.freesqldatabase.com",
   user: process.env.DB_USER || "sql5774886",
-  password: process.env.DB_PASS || "xClrmkRHqw",
+  password: process.env.DB_PASSWORD || "xClrmkRHqw", // <- FIXED HERE
   database: process.env.DB_NAME || "sql5774886",
   waitForConnections: true,
   connectionLimit: 10,
