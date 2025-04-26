@@ -204,6 +204,43 @@ router.put("/:id/reassign", async (req, res) => {
 });
 
 
+// ✅ Mark a Ticket as Resolved
+router.put("/:id/resolve", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await query("UPDATE tickets SET status = 'Resolved' WHERE id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Ticket not found." });
+        }
+
+        res.json({ message: "Ticket marked as Resolved successfully!" });
+    } catch (err) {
+        console.error("Error marking ticket as resolved:", err);
+        res.status(500).json({ error: "Database error. Could not mark ticket as resolved." });
+    }
+});
+
+// ✅ Mark a Ticket as Pending
+router.put("/:id/pending", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await query("UPDATE tickets SET status = 'Pending' WHERE id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Ticket not found." });
+        }
+
+        res.json({ message: "Ticket marked as Pending successfully!" });
+    } catch (err) {
+        console.error("Error marking ticket as pending:", err);
+        res.status(500).json({ error: "Database error. Could not mark ticket as pending." });
+    }
+});
+
+
 
 
 module.exports = router;
