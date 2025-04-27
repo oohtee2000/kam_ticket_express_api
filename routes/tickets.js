@@ -241,6 +241,24 @@ router.put("/:id/pending", async (req, res) => {
 });
 
 
+// GET total tickets and resolved tickets count
+router.get("/metrics/counts", async (req, res) => {
+    try {
+        const [totalTicketsResult] = await query("SELECT COUNT(*) AS total FROM tickets");
+        const [resolvedTicketsResult] = await query("SELECT COUNT(*) AS resolved FROM tickets WHERE status = 'Resolved'");
+
+        res.json({
+            totalTickets: totalTicketsResult.total,
+            resolvedTickets: resolvedTicketsResult.resolved
+        });
+    } catch (err) {
+        console.error("Error fetching ticket counts:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve ticket counts." });
+    }
+});
+
+
+
 
 
 module.exports = router;
