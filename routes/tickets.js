@@ -257,8 +257,29 @@ router.get("/metrics/counts", async (req, res) => {
     }
 });
 
+// 📅 GET resolved tickets count grouped by month
+router.get("/metrics/monthly-resolved", async (req, res) => {
+    try {
+        const results = await query(`
+            SELECT 
+                MONTH(created_at) AS month,
+                COUNT(*) AS resolvedCount
+            FROM tickets
+            WHERE status = 'Resolved'
+            GROUP BY MONTH(created_at)
+        `);
 
+        // Build an array with 12 months, even if some months have 0
+        const monthlyCounts = Array(12).fill(0);
+        results.forEach(result => {
+            monthlyCounts[result.month - 1] = result.resolvedCount;
+        });
 
-
+        res.json(monthlyCounts);
+    } catch (err) {
+        console.error("Error fetching monthly resolved tickets:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
+    }
+});
 
 module.exports = router;
