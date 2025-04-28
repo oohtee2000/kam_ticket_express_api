@@ -282,4 +282,35 @@ router.get("/metrics/monthly-resolved", async (req, res) => {
     }
 });
 
+
+// 📈 GET agent performance overview
+router.get("/metrics/agent-performance", async (req, res) => {
+    try {
+      const results = await query(`
+        SELECT 
+          assigned_to AS agent,
+          COUNT(*) AS ticketsHandled,
+          AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
+          SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
+        FROM tickets
+        WHERE assigned_to IS NOT NULL
+        GROUP BY assigned_to
+      `);
+  
+      const formattedResults = results.map(agent => ({
+        name: agent.agent,
+        ticketsHandled: agent.ticketsHandled,
+        avgResponseTime: `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${agent.avgResponseTimeMinutes % 60}m`,
+        resolutionRate: `${agent.resolutionRate.toFixed(2)}%`,
+        csat: "4.5/5" // Placeholder until you have CSAT (customer satisfaction) data
+      }));
+  
+      res.json(formattedResults);
+    } catch (err) {
+      console.error("Error fetching agent performance:", err);
+      res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
+    }
+  });
+  
+
 module.exports = router;
