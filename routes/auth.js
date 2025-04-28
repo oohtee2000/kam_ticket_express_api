@@ -10,7 +10,8 @@ router.get('/protected', verifyToken, (req, res) => {
   res.json({ message: `Hello ${req.user.email}, you accessed a protected route!`,
     data: { 'email': req.user.email,
       
-      'id' : req.user.id
+      'id' : req.user.id,
+      'role' : req.user.role
 
     }
    });
@@ -64,7 +65,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 🔑 Generate new token every time
-    const payload = { id: rows[0].id, email: rows[0].email };
+    const payload = { id: rows[0].id, email: rows[0].email, role: rows[0].role };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     console.log('✅ New Token Generated:', token);
@@ -79,6 +80,7 @@ router.post('/login', async (req, res) => {
         id: rows[0].id,
         name: rows[0].name,
         email: rows[0].email,
+        role: rows[0].role,
       },
     });
   } catch (err) {
