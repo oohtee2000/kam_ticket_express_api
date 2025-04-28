@@ -285,32 +285,65 @@ router.get("/metrics/monthly-resolved", async (req, res) => {
 
 // 📈 GET agent performance overview
 router.get("/metrics/agent-performance", async (req, res) => {
+  try {
+    const results = await query(`
+      SELECT 
+        assigned_to AS agent,
+        COUNT(*) AS ticketsHandled,
+        AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
+        SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
+      FROM tickets
+      WHERE assigned_to IS NOT NULL
+      GROUP BY assigned_to
+    `);
+
+    const formattedResults = results.map(agent => ({
+      name: agent.agent,
+      ticketsHandled: agent.ticketsHandled,
+      avgResponseTime: `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${agent.avgResponseTimeMinutes % 60}m`,
+      resolutionRate: `${agent.resolutionRate.toFixed(2)}%`,
+      csat: "4.5/5" // Placeholder until you have CSAT (customer satisfaction) data
+    }));
+
+    res.json(formattedResults);
+  } catch (err) {
+    console.error("Error fetching agent performance:", err);
+    res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
+  }
+});
+
+// 📊 GET agent performance overview
+router.get("/metrics/agent-performance", async (req, res) => {
     try {
-      const results = await query(`
-        SELECT 
-          assigned_to AS agent,
-          COUNT(*) AS ticketsHandled,
-          AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
-          SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
-        FROM tickets
-        WHERE assigned_to IS NOT NULL
-        GROUP BY assigned_to
-      `);
-  
-      const formattedResults = results.map(agent => ({
-        name: agent.agent,
-        ticketsHandled: agent.ticketsHandled,
-        avgResponseTime: `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${agent.avgResponseTimeMinutes % 60}m`,
-        resolutionRate: `${agent.resolutionRate.toFixed(2)}%`,
-        csat: "4.5/5" // Placeholder until you have CSAT (customer satisfaction) data
-      }));
-  
-      res.json(formattedResults);
+        const results = await query(`
+            SELECT 
+                assigned_to,
+                COUNT(*) AS ticketsHandled,
+                AVG(TIMESTAMPDIFF(MINUTE, created_at, NOW())) AS avgResponseMinutes,
+                SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
+            FROM tickets
+            WHERE assigned_to IS NOT NULL
+            GROUP BY assigned_to
+        `);
+
+        // Map assigned_to (user id) to user name
+        const detailedResults = await Promise.all(results.map(async agent => {
+            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.assigned_to]);
+            return {
+                name: user ? user.name : "Unknown",
+                ticketsHandled: agent.ticketsHandled,
+                avgResponseTime: `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`,
+                resolutionRate: `${agent.resolutionRate.toFixed(1)}%`,
+                csat: "4.5/5" // Placeholder for now
+            };
+        }));
+
+        res.json(detailedResults);
     } catch (err) {
-      console.error("Error fetching agent performance:", err);
-      res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
+        console.error("Error fetching agent performance:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
     }
-  });
-  
+});
+
 
 module.exports = router;
