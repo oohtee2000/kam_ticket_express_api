@@ -342,12 +342,12 @@ router.get("/metrics/agent-performance", async (req, res) => {
 
 
         const detailedResults = await Promise.all(results.map(async agent => {
-            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.assigned_to]);
+            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.agent]);
             return {
                 name: user ? user.name : "Unknown",
                 ticketsHandled: agent.ticketsHandled,
-                avgResponseTime: agent.avgResponseMinutes !== null
-                    ? `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`
+                avgResponseTime: agent.avgResponseTimeMinutes !== null
+                    ? `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${Math.floor(agent.avgResponseTimeMinutes % 60)}m`
                     : "N/A",
                 resolutionRate: agent.resolutionRate !== null
                     ? `${parseFloat(agent.resolutionRate).toFixed(1)}%`
@@ -355,6 +355,7 @@ router.get("/metrics/agent-performance", async (req, res) => {
                 csat: "4.5/5" // Placeholder
             };
         }));
+        
         
 
         res.json(detailedResults);
