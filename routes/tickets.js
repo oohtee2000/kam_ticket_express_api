@@ -311,7 +311,6 @@ router.get("/metrics/agent-performance", async (req, res) => {
     res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
   }
 });
-
 // 📊 GET agent performance overview
 router.get("/metrics/agent-performance", async (req, res) => {
     try {
@@ -332,9 +331,11 @@ router.get("/metrics/agent-performance", async (req, res) => {
             return {
                 name: user ? user.name : "Unknown",
                 ticketsHandled: agent.ticketsHandled,
-                avgResponseTime: `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`,
-                resolutionRate: `${agent.resolutionRate.toFixed(1)}%`,
-                csat: "4.5/5" // Placeholder for now
+                avgResponseTime: agent.avgResponseMinutes !== null
+                    ? `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`
+                    : "N/A",
+                resolutionRate: `${parseFloat(agent.resolutionRate).toFixed(1)}%`,
+                csat: "4.5/5" // Placeholder
             };
         }));
 
@@ -344,6 +345,7 @@ router.get("/metrics/agent-performance", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
     }
 });
+
 
 
 module.exports = router;
