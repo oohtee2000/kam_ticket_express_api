@@ -326,6 +326,21 @@ router.get("/metrics/agent-performance", async (req, res) => {
         `);
 
         // Map assigned_to (user id) to user name
+        // const detailedResults = await Promise.all(results.map(async agent => {
+        //     const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.assigned_to]);
+        //     return {
+        //         name: user ? user.name : "Unknown",
+        //         ticketsHandled: agent.ticketsHandled,
+        //         avgResponseTime: agent.avgResponseMinutes !== null
+        //             ? `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`
+        //             : "N/A",
+        //         resolutionRate: `${parseFloat(agent.resolutionRate).toFixed(1)}%`,
+        //         csat: "4.5/5" // Placeholder
+        //     };
+        // }));
+
+
+
         const detailedResults = await Promise.all(results.map(async agent => {
             const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.assigned_to]);
             return {
@@ -334,10 +349,13 @@ router.get("/metrics/agent-performance", async (req, res) => {
                 avgResponseTime: agent.avgResponseMinutes !== null
                     ? `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`
                     : "N/A",
-                resolutionRate: `${parseFloat(agent.resolutionRate).toFixed(1)}%`,
+                resolutionRate: agent.resolutionRate !== null
+                    ? `${parseFloat(agent.resolutionRate).toFixed(1)}%`
+                    : "N/A",
                 csat: "4.5/5" // Placeholder
             };
         }));
+        
 
         res.json(detailedResults);
     } catch (err) {
