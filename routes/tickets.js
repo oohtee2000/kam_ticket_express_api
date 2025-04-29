@@ -367,5 +367,22 @@ router.get("/metrics/agent-performance", async (req, res) => {
 });
 
 
+router.get("/metrics/department-breakdown", async (req, res) => {
+    try {
+      const results = await query(`
+        SELECT department, COUNT(*) AS ticketCount 
+        FROM tickets 
+        GROUP BY department
+      `);
+  
+      res.json(results); // [{ department: 'IT Support', ticketCount: 10 }, ...]
+    } catch (err) {
+      console.error("Error fetching department breakdown:", err);
+      res.status(500).json({ error: "Database error. Could not retrieve department breakdown." });
+    }
+  });
+  
+
+
 
 module.exports = router;
