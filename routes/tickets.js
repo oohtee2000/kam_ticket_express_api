@@ -257,10 +257,36 @@ router.get("/metrics/counts", async (req, res) => {
     }
 });
 
-// 📅 GET resolved tickets count grouped by month
+// // 📅 GET resolved tickets count grouped by month
+// router.get("/metrics/monthly-resolved", async (req, res) => {
+//     try {
+//         const results = await query(`
+//             SELECT 
+//                 MONTH(created_at) AS month,
+//                 COUNT(*) AS resolvedCount
+//             FROM tickets
+//             WHERE status = 'Resolved'
+//             GROUP BY MONTH(created_at)
+//         `);
+
+//         // Build an array with 12 months, even if some months have 0
+//         const monthlyCounts = Array(12).fill(0);
+//         results.forEach(result => {
+//             monthlyCounts[result.month - 1] = result.resolvedCount;
+//         });
+
+//         res.json(monthlyCounts);
+//     } catch (err) {
+//         console.error("Error fetching monthly resolved tickets:", err);
+//         res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
+//     }
+// });
+
+
+
 router.get("/metrics/monthly-resolved", async (req, res) => {
     try {
-        const results = await query(`
+        const [results] = await db.execute(`
             SELECT 
                 MONTH(created_at) AS month,
                 COUNT(*) AS resolvedCount
@@ -269,10 +295,15 @@ router.get("/metrics/monthly-resolved", async (req, res) => {
             GROUP BY MONTH(created_at)
         `);
 
-        // Build an array with 12 months, even if some months have 0
+        // Initialize an array with 12 zeros (Jan to Dec)
         const monthlyCounts = Array(12).fill(0);
+
+        // Populate the months with data
         results.forEach(result => {
-            monthlyCounts[result.month - 1] = result.resolvedCount;
+            const monthIndex = result.month - 1; // Convert 1–12 to 0–11
+            if (monthIndex >= 0 && monthIndex < 12) {
+                monthlyCounts[monthIndex] = result.resolvedCount;
+            }
         });
 
         res.json(monthlyCounts);
@@ -281,6 +312,7 @@ router.get("/metrics/monthly-resolved", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
     }
 });
+
 
 
 // 📈 GET agent performance overview
