@@ -10,9 +10,9 @@ console.log("DB Config:", {
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "sql5.freesqldatabase.com",
-  user: process.env.DB_USER || "sql5774886",
-  password: process.env.DB_PASSWORD || "xClrmkRHqw", // <- FIXED HERE
-  database: process.env.DB_NAME || "sql5774886",
+  user: process.env.DB_USER || "sql5777302",
+  password: process.env.DB_PASSWORD || "PvHaPyRgTa", // <- FIXED HERE
+  database: process.env.DB_NAME || "sql5777302",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
