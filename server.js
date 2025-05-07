@@ -14,7 +14,13 @@ const app = express();
 
 // Middleware
 // app.use(cors());
-app.use(cors({ origin: "http://localhost:3000" }));
+// app.use(cors({ origin: "http://localhost:3000" }));
+
+app.use(cors({
+    origin: ["http://localhost:3000", "https://kam-ticket.onrender.com"],
+    credentials: true // add this if you are using cookies or sessions
+  }));
+  
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
