@@ -58,7 +58,7 @@ router.get("/", async (req, res) => {
         // Map the results and include the image path (base URL + image filename)
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null // Image URL
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null // Image URL
         }));
         res.json(formattedResults);
     } catch (err) {
@@ -124,7 +124,7 @@ router.get("/recent/latest", async (req, res) => {
         // Format results with image URLs
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
         }));
 
         res.json(formattedResults);
@@ -143,7 +143,7 @@ router.get("/unresolved", async (req, res) => {
         // Format the results to include the image URL
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
         }));
 
         res.json(formattedResults);  // Send the formatted results as the response
