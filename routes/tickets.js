@@ -58,7 +58,7 @@ router.get("/", async (req, res) => {
         // Map the results and include the image path (base URL + image filename)
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null // Image URL
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null // Image URL
         }));
         res.json(formattedResults);
     } catch (err) {
@@ -124,7 +124,7 @@ router.get("/recent/latest", async (req, res) => {
         // Format results with image URLs
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
         }));
 
         res.json(formattedResults);
@@ -143,7 +143,7 @@ router.get("/unresolved", async (req, res) => {
         // Format the results to include the image URL
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `http://localhost:5000/uploads/${ticket.image}` : null
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
         }));
 
         res.json(formattedResults);  // Send the formatted results as the response
@@ -281,6 +281,37 @@ router.get("/metrics/counts", async (req, res) => {
 //         res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
 //     }
 // });
+
+
+
+router.get("/metrics/monthly-resolved", async (req, res) => {
+    try {
+        const [results] = await db.execute(`
+            SELECT 
+                MONTH(created_at) AS month,
+                COUNT(*) AS resolvedCount
+            FROM tickets
+            WHERE status = 'Resolved'
+            GROUP BY MONTH(created_at)
+        `);
+
+        // Initialize an array with 12 zeros (Jan to Dec)
+        const monthlyCounts = Array(12).fill(0);
+
+        // Populate the months with data
+        results.forEach(result => {
+            const monthIndex = result.month - 1; // Convert 1–12 to 0–11
+            if (monthIndex >= 0 && monthIndex < 12) {
+                monthlyCounts[monthIndex] = result.resolvedCount;
+            }
+        });
+
+        res.json(monthlyCounts);
+    } catch (err) {
+        console.error("Error fetching monthly resolved tickets:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
+    }
+});
 
 
 
