@@ -29,28 +29,6 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 
-// router.post("/", upload.single("image"), async (req, res) => {
-//     console.log("Received file:", req.file);
-//     console.log("Received body:", req.body);
-    
-//     const { name, email, phone, location, department, category, subCategory, otherSubCategory, title, details } = req.body;
-//     const image = req.file ? req.file.filename : null;
-
-//     try {
-//         const result = await query(
-//             "INSERT INTO tickets (name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-//             [name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, 'images']
-//         );
-//         res.json({ message: "Ticket submitted successfully!", ticketId: result.insertId });
-//     } catch (err) {
-//         console.error("Error inserting ticket:", err);
-//         res.status(500).json({ error: "Database error. Ticket not saved." });
-//     }
-// });
-
-
-
-
 router.get("/", async (req, res) => {
     try {
         const results = await query("SELECT * FROM tickets");
@@ -97,23 +75,58 @@ router.delete("/:id", async (req, res) => {
 });
 
 
+// router.put("/:id/status", async (req, res) => {
+//     const { id } = req.params;
+//     const { status } = req.body;
+
+//     try {
+//         const result = await query("UPDATE tickets SET status = ? WHERE id = ?", [status, id]);
+
+//         if (result.affectedRows === 0) {
+//             return res.status(404).json({ error: "Ticket not found" });
+//         }
+
+//         res.json({ message: "Ticket status updated successfully!" });
+//     } catch (err) {
+//         console.error("Error updating ticket status:", err);
+//         res.status(500).json({ error: "Database error. Could not update ticket status." });
+//     }
+// });
+
+
 router.put("/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-
+  
     try {
-        const result = await query("UPDATE tickets SET status = ? WHERE id = ?", [status, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Ticket not found" });
-        }
-
-        res.json({ message: "Ticket status updated successfully!" });
+      // Update status
+      await query("UPDATE tickets SET status = ? WHERE id = ?", [status, id]);
+  
+      // Fetch ticket details for email
+      const [ticket] = await query("SELECT * FROM tickets WHERE id = ?", [id]);
+  
+      // Only send resolved email
+      if (status === "Resolved" && ticket?.email) {
+        const { name, title, email } = ticket;
+        const resolvedBy = "Admin"; // Or get from logged-in user context if available
+  
+        // Send email
+        await sendEmail({
+          sender: { name: "Support", address: process.env.MAIL_USER },
+          reciepients: [{ name, address: email }],
+          subject: `Your Ticket #${id} Has Been Resolved`,
+          template: "ticket_resolved",
+          templateData: { name, title, ticketId: id, resolvedBy },
+        });
+      }
+  
+      res.json({ message: "Ticket status updated." });
     } catch (err) {
-        console.error("Error updating ticket status:", err);
-        res.status(500).json({ error: "Database error. Could not update ticket status." });
+      console.error("Error updating ticket status:", err);
+      res.status(500).json({ error: "Failed to update ticket status." });
     }
-});
+  });
+  
 
 
 // GET the 5 Most Recent Tickets
@@ -257,31 +270,6 @@ router.get("/metrics/counts", async (req, res) => {
     }
 });
 
-// // 📅 GET resolved tickets count grouped by month
-// router.get("/metrics/monthly-resolved", async (req, res) => {
-//     try {
-//         const results = await query(`
-//             SELECT 
-//                 MONTH(created_at) AS month,
-//                 COUNT(*) AS resolvedCount
-//             FROM tickets
-//             WHERE status = 'Resolved'
-//             GROUP BY MONTH(created_at)
-//         `);
-
-//         // Build an array with 12 months, even if some months have 0
-//         const monthlyCounts = Array(12).fill(0);
-//         results.forEach(result => {
-//             monthlyCounts[result.month - 1] = result.resolvedCount;
-//         });
-
-//         res.json(monthlyCounts);
-//     } catch (err) {
-//         console.error("Error fetching monthly resolved tickets:", err);
-//         res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
-//     }
-// });
-
 
 
 router.get("/metrics/monthly-resolved", async (req, res) => {
@@ -356,23 +344,6 @@ router.get("/metrics/agent-performance", async (req, res) => {
             WHERE assigned_to IS NOT NULL
             GROUP BY assigned_to
         `);
-
-        // Map assigned_to (user id) to user name
-        // const detailedResults = await Promise.all(results.map(async agent => {
-        //     const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.assigned_to]);
-        //     return {
-        //         name: user ? user.name : "Unknown",
-        //         ticketsHandled: agent.ticketsHandled,
-        //         avgResponseTime: agent.avgResponseMinutes !== null
-        //             ? `${Math.floor(agent.avgResponseMinutes / 60)}h ${Math.floor(agent.avgResponseMinutes % 60)}m`
-        //             : "N/A",
-        //         resolutionRate: `${parseFloat(agent.resolutionRate).toFixed(1)}%`,
-        //         csat: "4.5/5" // Placeholder
-        //     };
-        // }));
-
-
-
         const detailedResults = await Promise.all(results.map(async agent => {
             const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.agent]);
             return {
@@ -413,8 +384,6 @@ router.get("/metrics/department-breakdown", async (req, res) => {
       res.status(500).json({ error: "Database error. Could not retrieve department breakdown." });
     }
   });
-  
-
 
 
 module.exports = router;
