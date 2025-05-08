@@ -1,6 +1,8 @@
 const express = require("express");
 const { db, query } = require("../config/db");
 const upload = require("../middleware/upload");
+// const { Resend } = require("resend");
+
 
 const router = express.Router();
 
@@ -302,65 +304,33 @@ router.get("/metrics/monthly-resolved", async (req, res) => {
 });
 
 
-
-// 📈 GET agent performance overview
-router.get("/metrics/agent-performance", async (req, res) => {
-  try {
-    const results = await query(`
-      SELECT 
-        assigned_to AS agent,
-        COUNT(*) AS ticketsHandled,
-        AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
-        SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
-      FROM tickets
-      WHERE assigned_to IS NOT NULL
-      GROUP BY assigned_to
-    `);
-
-    const formattedResults = results.map(agent => ({
-      name: agent.agent,
-      ticketsHandled: agent.ticketsHandled,
-      avgResponseTime: `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${agent.avgResponseTimeMinutes % 60}m`,
-      resolutionRate: `${agent.resolutionRate.toFixed(2)}%`,
-      csat: "4.5/5" // Placeholder until you have CSAT (customer satisfaction) data
-    }));
-
-    res.json(formattedResults);
-  } catch (err) {
-    console.error("Error fetching agent performance:", err);
-    res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
-  }
-});
-// 📊 GET agent performance overview
 router.get("/metrics/agent-performance", async (req, res) => {
     try {
         const results = await query(`
             SELECT 
-                assigned_to,
+                assigned_to AS agentId,
                 COUNT(*) AS ticketsHandled,
-                AVG(TIMESTAMPDIFF(MINUTE, created_at, NOW())) AS avgResponseMinutes,
+                AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
                 SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
             FROM tickets
             WHERE assigned_to IS NOT NULL
             GROUP BY assigned_to
         `);
+
         const detailedResults = await Promise.all(results.map(async agent => {
-            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.agent]);
+            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.agentId]);
             return {
                 name: user ? user.name : "Unknown",
                 ticketsHandled: agent.ticketsHandled,
                 avgResponseTime: agent.avgResponseTimeMinutes !== null
-                    ? `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${Math.floor(agent.avgResponseTimeMinutes % 60)}m`
+                    ? `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${Math.round(agent.avgResponseTimeMinutes % 60)}m`
                     : "N/A",
-                resolutionRate: agent.resolutionRate !== null
-                    ? `${parseFloat(agent.resolutionRate).toFixed(1)}%`
-                    : "N/A",
+                resolutionRate: agent.resolutionRate !== null 
+                    ? `${agent.resolutionRate.toFixed(2)}%`
+                    : "0%",
                 csat: "4.5/5" // Placeholder
             };
         }));
-        
-        
-        
 
         res.json(detailedResults);
     } catch (err) {
@@ -368,6 +338,7 @@ router.get("/metrics/agent-performance", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
     }
 });
+
 
 
 router.get("/metrics/department-breakdown", async (req, res) => {
