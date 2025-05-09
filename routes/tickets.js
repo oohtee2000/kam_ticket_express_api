@@ -154,6 +154,24 @@ router.get("/unresolved", async (req, res) => {
     }
 });
 
+// GET all unassigned tickets
+router.get("/unassigned", async (req, res) => {
+    try {
+        const results = await query("SELECT * FROM tickets WHERE assigned_to IS NULL");
+
+        const formattedResults = results.map(ticket => ({
+            ...ticket,
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
+        }));
+
+        res.json(formattedResults);
+    } catch (err) {
+        console.error("Error fetching unassigned tickets:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve unassigned tickets." });
+    }
+});
+
+
 
 // In your tickets route (e.g., `routes/ticket.js`)
 router.put("/:id/assign", async (req, res) => {
