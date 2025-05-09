@@ -1,7 +1,7 @@
 const express = require("express");
 const { db, query } = require("../config/db");
 const upload = require("../middleware/upload");
-// const { Resend } = require("resend");
+
 
 
 const router = express.Router();
@@ -106,21 +106,7 @@ router.put("/:id/status", async (req, res) => {
   
       // Fetch ticket details for email
       const [ticket] = await query("SELECT * FROM tickets WHERE id = ?", [id]);
-  
-      // Only send resolved email
-      if (status === "Resolved" && ticket?.email) {
-        const { name, title, email } = ticket;
-        const resolvedBy = "Admin"; // Or get from logged-in user context if available
-  
-        // Send email
-        await sendEmail({
-          sender: { name: "Support", address: process.env.MAIL_USER },
-          reciepients: [{ name, address: email }],
-          subject: `Your Ticket #${id} Has Been Resolved`,
-          template: "ticket_resolved",
-          templateData: { name, title, ticketId: id, resolvedBy },
-        });
-      }
+
   
       res.json({ message: "Ticket status updated." });
     } catch (err) {
