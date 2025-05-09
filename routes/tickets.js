@@ -48,6 +48,23 @@ router.get("/", async (req, res) => {
 });
 
 
+router.get("/unassigned", async (req, res) => {
+    try {
+        const results = await query("SELECT * FROM tickets WHERE assigned_to IS NULL");
+
+        // Map the results and include the image path (base URL + image filename)
+        const formattedResults = results.map(ticket => ({
+            ...ticket,
+            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null // Image URL
+        }));
+        res.json(formattedResults);
+    } catch (err) {
+        console.error("Error fetching tickets:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve tickets." });
+    }
+});
+
+
 
 
 // 📌 GET a SINGLE Ticket by ID
@@ -153,24 +170,6 @@ router.get("/unresolved", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve unresolved tickets." });
     }
 });
-
-// GET all unassigned tickets
-router.get("/unassigned", async (req, res) => {
-    try {
-        const results = await query("SELECT * FROM tickets WHERE assigned_to IS NULL");
-
-        const formattedResults = results.map(ticket => ({
-            ...ticket,
-            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
-        }));
-
-        res.json(formattedResults);
-    } catch (err) {
-        console.error("Error fetching unassigned tickets:", err);
-        res.status(500).json({ error: "Database error. Could not retrieve unassigned tickets." });
-    }
-});
-
 
 
 // In your tickets route (e.g., `routes/ticket.js`)
