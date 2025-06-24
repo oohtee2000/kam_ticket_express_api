@@ -1,34 +1,50 @@
 const express = require("express");
 const { db, query } = require("../config/db");
 const upload = require("../middleware/upload");
+const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+const uploadsPath = process.env.UPLOADS_PATH || 'uploads';
 
 
 
 const router = express.Router();
 
 router.post("/", upload.single("image"), async (req, res) => {
-    const { name, email, phone, location, department, category, subCategory, otherSubCategory, title, details } = req.body;
-    
-    // Log the image path to ensure it's correctly saved
-    if (req.file) {
-        console.log("Uploaded image file:", req.file);
+    const {
+        name = null,
+        email = null,
+        phone = null,
+        location = null,
+        department = null,
+        category = null,
+        subCategory = null,
+        otherSubCategory = null,
+        title = null,
+        details = null,
+    } = req.body;
+
+    // 🚨 Required field check
+    if (!name || !email || !title || !details) {
+        return res.status(400).json({ error: "Name, email, title, and details are required." });
     }
-    
-    // Save the filename of the uploaded image
-    const image = req.file ? req.file.filename : null; // Save the filename instead of image data
+
+    const image = req.file ? req.file.filename : null;
 
     try {
         const result = await query(
-            "INSERT INTO tickets (name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            `INSERT INTO tickets 
+            (name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, image) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, image]
         );
-        
+
         res.json({ message: "Ticket submitted successfully!", ticketId: result.insertId });
     } catch (err) {
         console.error("Error inserting ticket:", err);
         res.status(500).json({ error: "Database error. Ticket not saved." });
     }
 });
+
+
 
 
 router.get("/", async (req, res) => {
@@ -38,7 +54,7 @@ router.get("/", async (req, res) => {
         // Map the results and include the image path (base URL + image filename)
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null // Image URL
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null // Image URL
         }));
         res.json(formattedResults);
     } catch (err) {
@@ -55,7 +71,7 @@ router.get("/unassigned", async (req, res) => {
         // Map the results and include the image path (base URL + image filename)
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null // Image URL
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null // Image URL
         }));
         res.json(formattedResults);
     } catch (err) {
@@ -142,7 +158,7 @@ router.get("/recent/latest", async (req, res) => {
         // Format results with image URLs
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
         }));
 
         res.json(formattedResults);
@@ -161,7 +177,7 @@ router.get("/unresolved", async (req, res) => {
         // Format the results to include the image URL
         const formattedResults = results.map(ticket => ({
             ...ticket,
-            image: ticket.image ? `https://kam-ticket-express-api.onrender.com/uploads/${ticket.image}` : null
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
         }));
 
         res.json(formattedResults);  // Send the formatted results as the response
@@ -276,72 +292,27 @@ router.get("/metrics/counts", async (req, res) => {
 });
 
 
-
 router.get("/metrics/monthly-resolved", async (req, res) => {
     try {
-        const [results] = await db.execute(`
-            SELECT 
-                MONTH(created_at) AS month,
-                COUNT(*) AS resolvedCount
-            FROM tickets
-            WHERE status = 'Resolved'
-            GROUP BY MONTH(created_at)
-        `);
-
-        // Initialize an array with 12 zeros (Jan to Dec)
-        const monthlyCounts = Array(12).fill(0);
-
-        // Populate the months with data
-        results.forEach(result => {
-            const monthIndex = result.month - 1; // Convert 1–12 to 0–11
-            if (monthIndex >= 0 && monthIndex < 12) {
-                monthlyCounts[monthIndex] = result.resolvedCount;
-            }
-        });
-
-        res.json(monthlyCounts);
+      const results = await query(`
+        SELECT 
+          YEAR(created_at) AS year,
+          MONTH(created_at) AS month,
+          MONTHNAME(created_at) AS monthName,
+          COUNT(*) AS resolvedCount
+        FROM tickets
+        WHERE status = 'Resolved'
+        GROUP BY YEAR(created_at), MONTH(created_at)
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `);
+  
+      res.json(results); // e.g., [{ year: 2025, month: 6, monthName: "June", resolvedCount: 12 }, ...]
     } catch (err) {
-        console.error("Error fetching monthly resolved tickets:", err);
-        res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
+      console.error("Error fetching monthly resolved tickets:", err);
+      res.status(500).json({ error: "Database error. Could not retrieve monthly resolved tickets." });
     }
-});
-
-
-router.get("/metrics/agent-performance", async (req, res) => {
-    try {
-        const results = await query(`
-            SELECT 
-                assigned_to AS agentId,
-                COUNT(*) AS ticketsHandled,
-                AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) AS avgResponseTimeMinutes,
-                SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) / COUNT(*) * 100 AS resolutionRate
-            FROM tickets
-            WHERE assigned_to IS NOT NULL
-            GROUP BY assigned_to
-        `);
-
-        const detailedResults = await Promise.all(results.map(async agent => {
-            const [user] = await query("SELECT name FROM users WHERE id = ?", [agent.agentId]);
-            return {
-                name: user ? user.name : "Unknown",
-                ticketsHandled: agent.ticketsHandled,
-                avgResponseTime: agent.avgResponseTimeMinutes !== null
-                    ? `${Math.floor(agent.avgResponseTimeMinutes / 60)}h ${Math.round(agent.avgResponseTimeMinutes % 60)}m`
-                    : "N/A",
-                resolutionRate: agent.resolutionRate !== null 
-                    ? `${agent.resolutionRate.toFixed(2)}%`
-                    : "0%",
-                csat: "4.5/5" // Placeholder
-            };
-        }));
-
-        res.json(detailedResults);
-    } catch (err) {
-        console.error("Error fetching agent performance:", err);
-        res.status(500).json({ error: "Database error. Could not retrieve agent performance." });
-    }
-});
-
+  });
+  
 
 
 router.get("/metrics/department-breakdown", async (req, res) => {
@@ -358,6 +329,131 @@ router.get("/metrics/department-breakdown", async (req, res) => {
       res.status(500).json({ error: "Database error. Could not retrieve department breakdown." });
     }
   });
+
+//   // 📊 GET Tickets Over Time (monthly, quarterly, yearly)
+// router.get("/metrics/time-distribution", async (req, res) => {
+//     const { type } = req.query; // 'monthly', 'quarterly', 'yearly'
+
+//     let queryStr = "";
+//     if (type === "monthly") {
+//         queryStr = `
+//             SELECT 
+//                 YEAR(created_at) AS year,
+//                 MONTH(created_at) AS month,
+//                 COUNT(*) AS ticketCount
+//             FROM tickets
+//             GROUP BY YEAR(created_at), MONTH(created_at)
+//             ORDER BY YEAR(created_at), MONTH(created_at)
+//         `;
+//     } else if (type === "quarterly") {
+//         queryStr = `
+//             SELECT 
+//                 YEAR(created_at) AS year,
+//                 QUARTER(created_at) AS quarter,
+//                 COUNT(*) AS ticketCount
+//             FROM tickets
+//             GROUP BY YEAR(created_at), QUARTER(created_at)
+//             ORDER BY YEAR(created_at), QUARTER(created_at)
+//         `;
+//     } else if (type === "yearly") {
+//         queryStr = `
+//             SELECT 
+//                 YEAR(created_at) AS year,
+//                 COUNT(*) AS ticketCount
+//             FROM tickets
+//             GROUP BY YEAR(created_at)
+//             ORDER BY YEAR(created_at)
+//         `;
+//     } else {
+//         return res.status(400).json({ error: "Invalid type. Use 'monthly', 'quarterly', or 'yearly'." });
+//     }
+
+//     try {
+//         const results = await query(queryStr);
+//         res.json(results);
+//     } catch (err) {
+//         console.error("Error fetching time-distribution stats:", err);
+//         res.status(500).json({ error: "Database error. Could not retrieve time-distribution stats." });
+//     }
+// });
+
+
+router.get("/metrics/time-distribution", async (req, res) => {
+    const { type, status } = req.query; // e.g. type=monthly&status=resolved
+    let queryStr = "";
+    let whereClause = "";
+  
+    if (status === "resolved") {
+      whereClause = `WHERE status = 'Resolved'`;
+    } else if (status === "opened") {
+      whereClause = `WHERE status != 'Resolved'`;
+    }
+  
+    if (type === "monthly") {
+      queryStr = `
+        SELECT 
+          YEAR(created_at) AS year,
+          MONTH(created_at) AS month,
+          COUNT(*) AS ticketCount
+        FROM tickets
+        ${whereClause}
+        GROUP BY YEAR(created_at), MONTH(created_at)
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `;
+    } else if (type === "quarterly") {
+      queryStr = `
+        SELECT 
+          YEAR(created_at) AS year,
+          QUARTER(created_at) AS quarter,
+          COUNT(*) AS ticketCount
+        FROM tickets
+        ${whereClause}
+        GROUP BY YEAR(created_at), QUARTER(created_at)
+        ORDER BY YEAR(created_at), QUARTER(created_at)
+      `;
+    } else if (type === "yearly") {
+      queryStr = `
+        SELECT 
+          YEAR(created_at) AS year,
+          COUNT(*) AS ticketCount
+        FROM tickets
+        ${whereClause}
+        GROUP BY YEAR(created_at)
+        ORDER BY YEAR(created_at)
+      `;
+    } else {
+      return res.status(400).json({ error: "Invalid type. Use 'monthly', 'quarterly', or 'yearly'." });
+    }
+  
+    try {
+      const results = await query(queryStr);
+      res.json(results);
+    } catch (err) {
+      console.error("Error fetching time-distribution stats:", err);
+      res.status(500).json({ error: "Database error. Could not retrieve stats." });
+    }
+  });
+
+  // 📧 GET tickets by email
+router.get("/by-email/:email", async (req, res) => {
+    const { email } = req.params;
+
+    try {
+        const results = await query("SELECT * FROM tickets WHERE email = ?", [email]);
+
+        const formattedResults = results.map(ticket => ({
+            ...ticket,
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
+        }));
+
+        res.json(formattedResults);
+    } catch (err) {
+        console.error("Error fetching tickets by email:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve tickets for the email." });
+    }
+});
+
+  
 
 
 module.exports = router;
