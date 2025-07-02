@@ -5,6 +5,7 @@ const db = require("./config/db");
 const path = require("path");
 const ticketRoutes = require("./routes/tickets");
 const authRoutes = require("./routes/auth");
+const commentRoutes = require("./routes/comment");
 const userRoutes = require("./routes/user");
 // const protectedRoutes = require("./routes/protected");
 
@@ -31,6 +32,7 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/auth", authRoutes);
 // app.use("/api/protected", protectedRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/comments", commentRoutes);
 
 // Test Route
 app.get("/", (req, res) => {

@@ -91,6 +91,8 @@ router.post('/login', async (req, res) => {
 
 // Logout Route
 router.post('/logout', (req, res) => {
+
+  console.log('Logout request received from client.');
   // Just a client-side operation: remove token
   res.status(200).json({ message: 'Logged out successfully (token should be discarded on client)' });
 });

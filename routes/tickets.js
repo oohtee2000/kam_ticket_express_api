@@ -110,25 +110,6 @@ router.delete("/:id", async (req, res) => {
 });
 
 
-// router.put("/:id/status", async (req, res) => {
-//     const { id } = req.params;
-//     const { status } = req.body;
-
-//     try {
-//         const result = await query("UPDATE tickets SET status = ? WHERE id = ?", [status, id]);
-
-//         if (result.affectedRows === 0) {
-//             return res.status(404).json({ error: "Ticket not found" });
-//         }
-
-//         res.json({ message: "Ticket status updated successfully!" });
-//     } catch (err) {
-//         console.error("Error updating ticket status:", err);
-//         res.status(500).json({ error: "Database error. Could not update ticket status." });
-//     }
-// });
-
-
 router.put("/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -151,11 +132,41 @@ router.put("/:id/status", async (req, res) => {
 
 
 // GET the 5 Most Recent Tickets
+// router.get("/recent/latest", async (req, res) => {
+//     try {
+//         const results = await query("SELECT * FROM tickets ORDER BY id DESC LIMIT 5");
+
+//         // Format results with image URLs
+//         const formattedResults = results.map(ticket => ({
+//             ...ticket,
+//             image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
+//         }));
+
+//         res.json(formattedResults);
+//     } catch (err) {
+//         console.error("Error fetching recent tickets:", err);
+//         res.status(500).json({ error: "Database error. Could not retrieve recent tickets." });
+//     }
+// });
+
 router.get("/recent/latest", async (req, res) => {
     try {
-        const results = await query("SELECT * FROM tickets ORDER BY id DESC LIMIT 5");
+        const results = await query(`
+            SELECT 
+                tickets.id,
+                tickets.title,
+                tickets.department,
+                tickets.status,
+                tickets.created_at,
+                tickets.category,
+                users.name AS assigned_to,
+                tickets.image
+            FROM tickets
+            LEFT JOIN users ON tickets.assigned_to = users.id
+            ORDER BY tickets.id DESC
+            LIMIT 5
+        `);
 
-        // Format results with image URLs
         const formattedResults = results.map(ticket => ({
             ...ticket,
             image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
@@ -167,6 +178,8 @@ router.get("/recent/latest", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve recent tickets." });
     }
 });
+
+
 
 // GET all unresolved tickets and unassigned tickets
 router.get("/unresolved", async (req, res) => {
@@ -237,44 +250,6 @@ router.put("/:id/reassign", async (req, res) => {
     }
 });
 
-
-// ✅ Mark a Ticket as Resolved
-router.put("/:id/resolve", async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const result = await query("UPDATE tickets SET status = 'Resolved' WHERE id = ?", [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Ticket not found." });
-        }
-
-        res.json({ message: "Ticket marked as Resolved successfully!" });
-    } catch (err) {
-        console.error("Error marking ticket as resolved:", err);
-        res.status(500).json({ error: "Database error. Could not mark ticket as resolved." });
-    }
-});
-
-// ✅ Mark a Ticket as Pending
-router.put("/:id/pending", async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const result = await query("UPDATE tickets SET status = 'Pending' WHERE id = ?", [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Ticket not found." });
-        }
-
-        res.json({ message: "Ticket marked as Pending successfully!" });
-    } catch (err) {
-        console.error("Error marking ticket as pending:", err);
-        res.status(500).json({ error: "Database error. Could not mark ticket as pending." });
-    }
-});
-
-
 // GET total tickets and resolved tickets count
 router.get("/metrics/counts", async (req, res) => {
     try {
@@ -329,54 +304,6 @@ router.get("/metrics/department-breakdown", async (req, res) => {
       res.status(500).json({ error: "Database error. Could not retrieve department breakdown." });
     }
   });
-
-//   // 📊 GET Tickets Over Time (monthly, quarterly, yearly)
-// router.get("/metrics/time-distribution", async (req, res) => {
-//     const { type } = req.query; // 'monthly', 'quarterly', 'yearly'
-
-//     let queryStr = "";
-//     if (type === "monthly") {
-//         queryStr = `
-//             SELECT 
-//                 YEAR(created_at) AS year,
-//                 MONTH(created_at) AS month,
-//                 COUNT(*) AS ticketCount
-//             FROM tickets
-//             GROUP BY YEAR(created_at), MONTH(created_at)
-//             ORDER BY YEAR(created_at), MONTH(created_at)
-//         `;
-//     } else if (type === "quarterly") {
-//         queryStr = `
-//             SELECT 
-//                 YEAR(created_at) AS year,
-//                 QUARTER(created_at) AS quarter,
-//                 COUNT(*) AS ticketCount
-//             FROM tickets
-//             GROUP BY YEAR(created_at), QUARTER(created_at)
-//             ORDER BY YEAR(created_at), QUARTER(created_at)
-//         `;
-//     } else if (type === "yearly") {
-//         queryStr = `
-//             SELECT 
-//                 YEAR(created_at) AS year,
-//                 COUNT(*) AS ticketCount
-//             FROM tickets
-//             GROUP BY YEAR(created_at)
-//             ORDER BY YEAR(created_at)
-//         `;
-//     } else {
-//         return res.status(400).json({ error: "Invalid type. Use 'monthly', 'quarterly', or 'yearly'." });
-//     }
-
-//     try {
-//         const results = await query(queryStr);
-//         res.json(results);
-//     } catch (err) {
-//         console.error("Error fetching time-distribution stats:", err);
-//         res.status(500).json({ error: "Database error. Could not retrieve time-distribution stats." });
-//     }
-// });
-
 
 router.get("/metrics/time-distribution", async (req, res) => {
     const { type, status } = req.query; // e.g. type=monthly&status=resolved
@@ -453,7 +380,27 @@ router.get("/by-email/:email", async (req, res) => {
     }
 });
 
-  
+// 📌 GET tickets assigned to a specific user by email
+router.get("/assigned/:email", async (req, res) => {
+    const { email } = req.params;
+
+    try {
+        const results = await query("SELECT * FROM tickets WHERE assigned_to = ?", [email]);
+
+        // Format image URLs
+        const formattedResults = results.map(ticket => ({
+            ...ticket,
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
+        }));
+
+        res.json(formattedResults);
+    } catch (err) {
+        console.error("Error fetching assigned tickets:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve assigned tickets." });
+    }
+});
+
+
 
 
 module.exports = router;
