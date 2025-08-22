@@ -5,25 +5,30 @@ const router = express.Router();
 
 // POST /api/comments - Add a new comment
 router.post("/", async (req, res) => {
-  const { ticket_id, content } = req.body;
+  const { ticket_id, content, isAdmin } = req.body; // 👈 include isAdmin
 
   if (!ticket_id || !content) {
-    return res.status(400).json({ message: "ticket_id and content are required." });
+    return res
+      .status(400)
+      .json({ message: "ticket_id and content are required." });
   }
 
   try {
-    const sql = "INSERT INTO comments (ticket_id, content) VALUES (?, ?)";
-    const result = await query(sql, [ticket_id, content]);
+    const sql =
+      "INSERT INTO comments (ticket_id, content, isAdmin) VALUES (?, ?, ?)";
+    const result = await query(sql, [ticket_id, content, isAdmin || 0]); // default = 0 (user)
 
     res.status(201).json({
       message: "Comment added successfully.",
       commentId: result.insertId,
+      isAdmin: isAdmin || 0,
     });
   } catch (err) {
     console.error("Error adding comment:", err);
     res.status(500).json({ message: "Failed to add comment." });
   }
 });
+
 
 // GET /api/comments/:ticket_id - Get all comments for a ticket
 router.get("/:ticket_id", async (req, res) => {

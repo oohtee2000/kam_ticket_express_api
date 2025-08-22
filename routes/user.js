@@ -106,73 +106,73 @@ router.post(
  * @desc    Edit an existing user
  * @access  Private (Requires authentication)
  */
-// router.put("/:id", upload.single("profile_picture"), [
-//     check("name", "Name is required").optional().not().isEmpty(),
-//     check("email", "Please include a valid email").optional().isEmail(),
-//     check("role", "Role is required").optional().not().isEmpty(),
-//     check("department", "Department is required").optional().not().isEmpty(),
-//     check("phone_number", "Phone number is required").optional().not().isEmpty(),
-// ], async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//     return res.status(400).json({ errors: errors.array() });
-//     }
+router.put("/:id", upload.single("profile_picture"), [
+    check("name", "Name is required").optional().not().isEmpty(),
+    check("email", "Please include a valid email").optional().isEmail(),
+    check("role", "Role is required").optional().not().isEmpty(),
+    check("department", "Department is required").optional().not().isEmpty(),
+    check("phone_number", "Phone number is required").optional().not().isEmpty(),
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+    }
 
-//     const { name, email, role, department, phone_number } = req.body;
-//     const userId = req.params.id;
+    const { name, email, role, department, phone_number } = req.body;
+    const userId = req.params.id;
 
-//     try {
-//     // Fetch the existing user before updating
-//     const existingUser = await query("SELECT profile_picture FROM users WHERE id = ?", [userId]);
+    try {
+    // Fetch the existing user before updating
+    const existingUser = await query("SELECT profile_picture FROM users WHERE id = ?", [userId]);
 
-//     if (existingUser.length === 0) {
-//         return res.status(404).json({ msg: "User not found" });
-//     }
+    if (existingUser.length === 0) {
+        return res.status(404).json({ msg: "User not found" });
+    }
 
-//     let updateFields = {};
-//     if (name) updateFields.name = name;
-//     if (email) updateFields.email = email;
-//     if (role) updateFields.role = role;
-//     if (department) updateFields.department = department;
-//     if (phone_number) updateFields.phone_number = phone_number;
+    let updateFields = {};
+    if (name) updateFields.name = name;
+    if (email) updateFields.email = email;
+    if (role) updateFields.role = role;
+    if (department) updateFields.department = department;
+    if (phone_number) updateFields.phone_number = phone_number;
 
-//     if (req.file) {
-//         const newProfilePath =  req.file.filename;
-//         ;
+    if (req.file) {
+        const newProfilePath =  req.file.filename;
+        ;
 
-//         // Delete old profile picture safely
-//         if (existingUser[0].profile_picture) {
-//         const oldImagePath = path.join(__dirname, "..", "uploads", path.basename(existingUser[0].profile_picture));
-//         try {
-//             if (fs.existsSync(oldImagePath)) {
-//             fs.unlinkSync(oldImagePath);
-//             }
-//         } catch (error) {
-//             console.error("Error deleting old profile picture:", error);
-//         }
-//         }
+        // Delete old profile picture safely
+        if (existingUser[0].profile_picture) {
+        const oldImagePath = path.join(__dirname, "..", "uploads", path.basename(existingUser[0].profile_picture));
+        try {
+            if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+            }
+        } catch (error) {
+            console.error("Error deleting old profile picture:", error);
+        }
+        }
 
-//         updateFields.profile_picture = newProfilePath;
-//     }
+        updateFields.profile_picture = newProfilePath;
+    }
 
-//     const keys = Object.keys(updateFields);
-//     const values = Object.values(updateFields);
+    const keys = Object.keys(updateFields);
+    const values = Object.values(updateFields);
 
-//     if (keys.length === 0) {
-//         return res.status(400).json({ msg: "No fields provided for update" });
-//     }
+    if (keys.length === 0) {
+        return res.status(400).json({ msg: "No fields provided for update" });
+    }
 
-//     const setString = keys.map((key) => `${key} = ?`).join(", ");
-//     values.push(userId);
+    const setString = keys.map((key) => `${key} = ?`).join(", ");
+    values.push(userId);
 
-//     await query(`UPDATE users SET ${setString} WHERE id = ?`, values);
+    await query(`UPDATE users SET ${setString} WHERE id = ?`, values);
 
-//     res.json({ msg: "User updated successfully", profile_picture: updateFields.profile_picture || existingUser[0].profile_picture });
-//     } catch (err) {
-//     console.error(err.message);
-//     res.status(500).send("Server error");
-//     }
-// });
+    res.json({ msg: "User updated successfully", profile_picture: updateFields.profile_picture || existingUser[0].profile_picture });
+    } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+    }
+});
 
 
 router.put(

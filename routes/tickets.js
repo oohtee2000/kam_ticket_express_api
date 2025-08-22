@@ -37,7 +37,8 @@ router.post("/", upload.single("image"), async (req, res) => {
             [name, email, phone, location, department, category, subCategory, otherSubCategory, title, details, image]
         );
 
-        res.json({ message: "Ticket submitted successfully!", ticketId: result.insertId });
+        res.status(201).json({ message: "Ticket submitted successfully!", ticketId: result.insertId });
+
     } catch (err) {
         console.error("Error inserting ticket:", err);
         res.status(500).json({ error: "Database error. Ticket not saved." });
@@ -380,6 +381,26 @@ router.get("/by-email/:email", async (req, res) => {
     }
 });
 
+//  📌 GET tickets created by a specific user (by user ID)
+router.get("/assigned-to/:userId", async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const results = await query("SELECT * FROM tickets WHERE assigned_to = ?", [userId]);
+
+        const formattedResults = results.map(ticket => ({
+            ...ticket,
+            image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
+        }));
+
+        res.json(formattedResults);
+    } catch (err) {
+        console.error("Error fetching tickets by user ID:", err);
+        res.status(500).json({ error: "Database error. Could not retrieve tickets for the user." });
+    }
+});
+
+
 // 📌 GET tickets assigned to a specific user by email
 router.get("/assigned/:email", async (req, res) => {
     const { email } = req.params;
@@ -399,6 +420,8 @@ router.get("/assigned/:email", async (req, res) => {
         res.status(500).json({ error: "Database error. Could not retrieve assigned tickets." });
     }
 });
+
+//
 
 
 
