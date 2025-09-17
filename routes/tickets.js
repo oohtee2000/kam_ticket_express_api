@@ -50,7 +50,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
 router.get("/", async (req, res) => {
     try {
-        const results = await query("SELECT * FROM tickets");
+        const results = await query("SELECT * FROM tickets ORDER BY created_at DESC");
 
         // Map the results and include the image path (base URL + image filename)
         const formattedResults = results.map(ticket => ({
