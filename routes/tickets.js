@@ -131,25 +131,6 @@ router.put("/:id/status", async (req, res) => {
   });
   
 
-
-// GET the 5 Most Recent Tickets
-// router.get("/recent/latest", async (req, res) => {
-//     try {
-//         const results = await query("SELECT * FROM tickets ORDER BY id DESC LIMIT 5");
-
-//         // Format results with image URLs
-//         const formattedResults = results.map(ticket => ({
-//             ...ticket,
-//             image: ticket.image ? `${baseUrl}/${uploadsPath}/${ticket.image}` : null
-//         }));
-
-//         res.json(formattedResults);
-//     } catch (err) {
-//         console.error("Error fetching recent tickets:", err);
-//         res.status(500).json({ error: "Database error. Could not retrieve recent tickets." });
-//     }
-// });
-
 router.get("/recent/latest", async (req, res) => {
     try {
         const results = await query(`
@@ -164,7 +145,7 @@ router.get("/recent/latest", async (req, res) => {
                 tickets.image
             FROM tickets
             LEFT JOIN users ON tickets.assigned_to = users.id
-            ORDER BY tickets.id DESC
+            ORDER BY tickets.created_at DESC
             LIMIT 5
         `);
 

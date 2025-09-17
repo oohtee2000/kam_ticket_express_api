@@ -87,7 +87,7 @@ router.post(
 
       const result = await query(
         "INSERT INTO users (name, email, password, role, department, phone_number, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [name, email, hashedPassword, role, department, phone_number, profile_picture]
+        [name, email, hashedPassword, role, department, phone_number, profile_picture || null ]
       );
 
       console.log("User added successfully:", result);
